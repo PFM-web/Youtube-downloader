@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-100 text-gray-900">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Downloader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="//unpkg.com/alpinejs" defer></script>
+</head>
+<body>
+  <div class="min-h-screen flex items-center justify-center p-4" x-data="youtubeDownloader()">
+    <div class="bg-white rounded-lg shadow p-6 w-full max-w-lg">
+      <h1 class="text-2xl font-bold mb-4">Minimal YouTube Downloader</h1>
+      
+      <form @submit.prevent="fetchStreams">
+        <input type="url" x-model="url" placeholder="Enter YouTube URL" class="w-full border p-2 rounded mb-4" required />
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Get Formats</button>
+      </form>
+
+      <template x-if="title">
+        <div class="mt-4">
+          <h2 class="text-lg font-semibold" x-text="title"></h2>
+          <div class="mt-2 space-y-2">
+            <template x-for="(itag, label) in streams" :key="label">
+              <form method="POST" action="/download">
+                <input type="hidden" name="url" :value="url" />
+                <input type="hidden" name="itag" :value="itag" />
+                <button type="submit" class="w-full border border-gray-300 py-2 rounded hover:bg-gray-100" x-text="`Download ${label.toUpperCase()}`" :disabled="!itag"></button>
+              </form>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="error">
+        <p class="text-red-500 mt-4" x-text="error"></p>
+      </template>
+    </div>
+  </div>
+
+  <script>
+    function youtubeDownloader() {
+      return {
+        url: '',
+        title: '',
+        streams: {},
+        error: '',
+        async fetchStreams() {
+          this.title = '';
+          this.error = '';
+          try {
+            const formData = new FormData();
+            formData.append('url', this.url);
+            const res = await fetch('/get_streams', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await res.json();
+            if (data.error) {
+              this.error = data.error;
+            } else {
+              this.title = data.title;
+              this.streams = data.streams;
+            }
+          } catch (e) {
+            this.error = 'Failed to fetch formats.';
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
